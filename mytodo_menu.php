@@ -6,18 +6,25 @@
 
 
 <?php
-/************************************
+/*****************************************************
 今後の実装予定機能
 ＜優先（高）＞
 〇・メモ欄の追加
 ・日付ごとのTodoリスト管理
  …日付ごとに見れるようにする。
-・作業中、作業終了で表を分ける。その中で日にちで分ける。
+・〇作業中、作業終了で表を分ける。その中で日にちで分ける。
 　→・表の日時を時間表示にする。
-・リストの「アーカイブ保存」ボタンを追加（表から非表示。アーカイブフラグ追加。）
 ・目的、PDCAなどの項目追加（詳細とメモ欄メモで代用はできている）
  …詳細の登録デフォルト設定で対応可。こちらのほうが柔軟にできる。
+〇・id仕様からクラス仕様に整理する（大きく改変必要。やるなら早めにやっておきたい。）
+　…イメージは、行ごとにdivで異なるid付与、クラスはdispとeditの２つのみ付与。
+　　divのid指定からのclass指定により、指定行のみの操作が可能になるはず。
+　　→trへのid指定により完了
+
+＜優先（中）＞
 ・継続Todoを設定する（継続フラグ追加。表を別で表示する。）
+・リストの「アーカイブ保存」ボタンを追加（表から非表示。アーカイブフラグ追加。）
+・表のタイトルから終了日時のループをhtmlに直す。
 
 ＜優先（低）＞
 ・作業実績の表示
@@ -26,8 +33,7 @@
 ・デザインの改善
 ・メモアーカイブのDB化
 未・メモのbr消し
-*************************************/
-
+*******************************************************/
 
 $dsn = 'mysql:dbname=todo_master;host=localhost;';
 $user = 'root';
@@ -65,14 +71,13 @@ if(!empty($_POST['finish_id'])){
     $stmt->execute();
 }
 
-//メモ欄の保存・更新
-
 //メモの<br>消しに失敗
 // $ontable_memo_nl = file_get_contents("ontable_memo.txt");
 // $archive_memo_nl = file_get_contents("archive_memo.txt");
-// file_put_contents("archive_memo.txt", nl2br($archive_memo_nl)); //brタグの消去
+// file_put_contents("archive_memo.txt", nl2br($archive_memo_nl));
 // file_put_contents("ontable_memo.txt", nl2br($ontable_memo_nl));
 
+//メモ欄の保存・更新
 if(!empty($_POST['ontable_save'])){
     file_put_contents("ontable_memo.txt", $_POST['memo']);
 }
@@ -82,32 +87,32 @@ if(!empty($_POST['archive_save'])){
 }
 $ontable_memo = file_get_contents("ontable_memo.txt");
 $archive_memo = file_get_contents("archive_memo.txt");
-//file_put_contents("archive_memo.txt", br2nl($archive_memo)); //brタグの消去
+//file_put_contents("archive_memo.txt", br2nl($archive_memo));
 //file_put_contents("ontable_memo.txt", br2nl($ontable_memo));
 
 if($ontable_memo==''){
-    //メモ欄デフォルト設定
+    /***** メモ欄デフォルト設定 *****/
     $ontable_memo.=date('Y年m月d日')."\n";
 }
 
 $sql = "SELECT * FROM todo_master;";
 $stmt = $pdo->query($sql);
+$non_disp='0000-00-00 00:00:00';
 while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
+    if($row['start']==$non_disp) $row['start']="";
+    if($row['target']==$non_disp) $row['target']="";
+    if($row['finish']==$non_disp){
+        $row['finish']="";
+        $ongoing_result[]=$row;
+    }else{
+        $finished_result[]=$row;
+    }
     $result[]=$row;
 }
-$non_disp='0000-00-00 00:00:00';
 
-$i=0;
-foreach($result as $row){
-    if($row['start']==$non_disp) $result[$i]['start']="";
-    if($row['target']==$non_disp) $result[$i]['target']="";
-    if($row['finish']==$non_disp) $result[$i]['finish']="";
-    $i+=1;
-}
 $keys=array_keys($result[0]);
 
 function br2nl($string){
-     // 大文字・小文字を区別しない
     return preg_replace('/<br[[:space:]]*\/?[[:space:]]*>/i', "\n", $string);
 }
 
@@ -121,7 +126,8 @@ function br2nl($string){
     <h2>Todoリスト　マイメニュー</h2>
     <h3>今日のTodo</h3>
     <form method='post' name='mymenu_form' action='mytodo_menu.php'>
-        <a href='mytodo_register.php'>新規登録</a>
+        <a href='mytodo_register.php'>新規登録</a><br>
+        <br>達成済み項目<br>
         <table border="1">
             <tr>
                 <th>行番号</th>
@@ -132,22 +138,47 @@ function br2nl($string){
                 <th>終了予定日時</th>
                 <th>終了日時</th>
             </tr>
-            <?php foreach($result as $row){ ?>
-                <tr>
+            <?php foreach($finished_result as $row){ ?>
+                <tr id='<?php echo "rowid".$row['id']; ?>'>
                     <td><?php echo $row['id']; ?></td>
                     <td><input type=button id=<?php echo $row['id']; ?> value='編集' onClick="typeChange('<?php echo $row['id']; ?>');">　
                     <input type=button value='削除' onClick="removeConfirm('<?php echo $row['id']; ?>');">
                     <input type=submit value='作業終了' onClick="document.getElementById('finish_id').value='<?php echo $row['id']; ?>';"></td>
-                    <?php foreach($keys as $key => $value){ ?>
-                        <?php if($key!=0){ ?>
-                            <td> <p id="<?php echo 'disp'.$row['id'].$value; ?>"><?php echo $row[$value]; ?></p>
-                            <input type=text id="<?php echo 'edit'.$row['id'].$value; ?>" name='<?php echo $value; ?>' value='<?php echo $row[$value]; ?>'></td>
+                        <?php foreach($keys as $key => $value){ ?>
+                            <?php if($key!=0){ ?>
+                                <td>
+                                    <p class='disp'><?php echo $row[$value]; ?></p>
+                                    <input type=text class='edit' name='<?php echo $value; ?>' value='<?php echo $row[$value]; ?>'>
+                                </td>
+                            <?php } ?>
                         <?php } ?>
-                    <?php } ?>
                     <?php unset($value); ?>
                 </tr>
             <?php } ?>
         </table>
+        <br>未達成項目<br>
+        <table border="1">
+            <?php foreach($ongoing_result as $row){ ?>
+                <tr id='<?php echo "rowid".$row['id']; ?>'>
+                    <td><?php echo $row['id']; ?></td>
+                    <td><input type=button id=<?php echo $row['id']; ?> value='編集' onClick="typeChange('<?php echo $row['id']; ?>');">　
+                    <input type=button value='削除' onClick="removeConfirm('<?php echo $row['id']; ?>');">
+                    <input type=submit value='作業終了' onClick="document.getElementById('finish_id').value='<?php echo $row['id']; ?>';"></td>
+                        <?php foreach($keys as $key => $value){ ?>
+                            <?php if($key!=0){ ?>
+                                <td>
+                                    <p class='disp'><?php echo $row[$value]; ?></p>
+                                    <input type=text class='edit' name='<?php echo $value; ?>' value='<?php echo $row[$value]; ?>'>
+                                    <!--id="<?php //echo 'disp'.$row['id'].$value; ?>"-->
+                                    <!--id="<?php //echo 'edit'.$row['id'].$value; ?>"-->
+                                </td>
+                            <?php } ?>
+                        <?php } ?>
+                    <?php unset($value); ?>
+                </tr>
+            <?php } ?>
+        </table>
+
         <input type=hidden id='edit_id' name='edit_id' value=''>
         <input type=hidden id='remove_id' name='remove_id' value=''>
         <input type=hidden id='finish_id' name='finish_id' value=''>
@@ -180,45 +211,42 @@ function br2nl($string){
 
 <script type="text/javascript">
 
-//初期表示は非表示
-<?php foreach($result as $row){ ?>
-    <?php foreach($keys as $value){ ?>
-        <?php if($value!='id'){ ?>
-            document.getElementById('<?php echo 'edit'.$row['id'].$value; ?>').style.display ="none";
-            document.getElementById('<?php echo 'edit'.$row['id'].$value; ?>').disabled ='true';
-            document.getElementById('<?php echo 'disp'.$row['id'].$value; ?>').style.display ="block";
-        <?php } ?>
-    <?php } ?>
-<?php } ?>
+//初期状態は編集不可
+const edit = document.getElementsByClassName('edit');
+const disp = document.getElementsByClassName('disp');
+for(var i=0; i<edit.length; i++){
+    edit[i].style.display = "none";
+    edit[i].disabled = 'true';
+    disp[i].style.display = "block";
+}
 
 function typeChange(changeId){
-    <?php foreach($keys as $key => $value){ ?>
-        <?php if($value!='id'){ ?>
-            const <?php echo 'disp'.$value; ?> = document.getElementById('disp'+changeId+'<?php echo $value; ?>');
-            const <?php echo 'edit'.$value; ?> = document.getElementById('edit'+changeId+'<?php echo $value; ?>');
-            if(<?php echo 'disp'.$value; ?>.style.display=="block"){
-                <?php echo 'disp'.$value; ?>.style.display ="none";
-                <?php echo 'edit'.$value; ?>.style.display ="block";
-                <?php echo 'edit'.$value; ?>.disabled ="";
-            }else{
-                <?php echo 'disp'.$value; ?>.style.display ="block";
-                <?php echo 'edit'.$value; ?>.style.display ="none";
-            }
-        <?php } ?>
-    <?php } ?>
+    const rowid = document.getElementById('rowid'+changeId);
+    const editrow = rowid.getElementsByClassName('edit');
+    const disprow = rowid.getElementsByClassName('disp');
+    for(var i=0; i<editrow.length; i++){
+        if(disprow[i].style.display=="block"){
+            disprow[i].style.display = "none";
+            editrow[i].style.display = "block";
+            editrow[i].disabled = "";
+        }else{
+            disprow[i].style.display = "block";
+            editrow[i].style.display = "none";
+        }
+    }
     if(document.getElementById(changeId).value=='編集'){
-        document.getElementById(changeId).value='保存';
+        document.getElementById(changeId).value = '保存';
     }else{
-        document.getElementById(changeId).value='編集';
-        document.getElementById('edit_id').value=changeId;
+        document.getElementById(changeId).value = '編集';
+        document.getElementById('edit_id').value = changeId;
         document.mymenu_form.submit();
     }
 }
 
 function removeConfirm(removeId){
-    var conf=window.confirm('行番号'+removeId+'を本当に削除しますか？');
-    if(conf==true){
-        document.getElementById('remove_id').value=removeId;
+    const conf = window.confirm('行番号'+removeId+'を本当に削除しますか？');
+    if(conf == true){
+        document.getElementById('remove_id').value = removeId;
         document.mymenu_form.submit();
     }
 }
