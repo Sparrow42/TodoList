@@ -20,6 +20,7 @@
 　…イメージは、行ごとにdivで異なるid付与、クラスはdispとeditの２つのみ付与。
 　　divのid指定からのclass指定により、指定行のみの操作が可能になるはず。
 　　→trへのid指定により完了
+・作業開始ボタンの追加。
 
 ＜優先（中）＞
 ・継続Todoを設定する（継続フラグ追加。表を別で表示する。）
@@ -71,6 +72,15 @@ if(!empty($_POST['finish_id'])){
     $stmt->execute();
 }
 
+//開始時刻の更新
+if(!empty($_POST['start_id'])){
+    $start_time = date("Y/m/d H:i:s");
+    $sql = "UPDATE todo_master SET start='".$start_time."' WHERE id=".$_POST['start_id'];
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute();
+}
+
+
 //メモの<br>消しに失敗
 // $ontable_memo_nl = file_get_contents("ontable_memo.txt");
 // $archive_memo_nl = file_get_contents("archive_memo.txt");
@@ -98,6 +108,9 @@ if($ontable_memo==''){
 $sql = "SELECT * FROM todo_master;";
 $stmt = $pdo->query($sql);
 $non_disp='0000-00-00 00:00:00';
+$ongoing_result=[];
+$finished_result=[];
+$result=[];
 while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
     if($row['start']==$non_disp) $row['start']="";
     if($row['target']==$non_disp) $row['target']="";
@@ -143,7 +156,9 @@ function br2nl($string){
                     <td><?php echo $row['id']; ?></td>
                     <td><input type=button id=<?php echo $row['id']; ?> value='編集' onClick="typeChange('<?php echo $row['id']; ?>');">　
                     <input type=button value='削除' onClick="removeConfirm('<?php echo $row['id']; ?>');">
-                    <input type=submit value='作業終了' onClick="document.getElementById('finish_id').value='<?php echo $row['id']; ?>';"></td>
+                    <input type=submit value='作業開始' onClick="document.getElementById('start_id').value='<?php echo $row['id']; ?>';">
+                    <input type=submit value='作業終了' onClick="document.getElementById('finish_id').value='<?php echo $row['id']; ?>';">
+                    </td>
                         <?php foreach($keys as $key => $value){ ?>
                             <?php if($key!=0){ ?>
                                 <td>
@@ -163,6 +178,7 @@ function br2nl($string){
                     <td><?php echo $row['id']; ?></td>
                     <td><input type=button id=<?php echo $row['id']; ?> value='編集' onClick="typeChange('<?php echo $row['id']; ?>');">　
                     <input type=button value='削除' onClick="removeConfirm('<?php echo $row['id']; ?>');">
+                    <input type=submit value='作業開始' onClick="document.getElementById('start_id').value='<?php echo $row['id']; ?>';">
                     <input type=submit value='作業終了' onClick="document.getElementById('finish_id').value='<?php echo $row['id']; ?>';"></td>
                         <?php foreach($keys as $key => $value){ ?>
                             <?php if($key!=0){ ?>
@@ -181,6 +197,7 @@ function br2nl($string){
 
         <input type=hidden id='edit_id' name='edit_id' value=''>
         <input type=hidden id='remove_id' name='remove_id' value=''>
+        <input type=hidden id='start_id' name='start_id' value=''>
         <input type=hidden id='finish_id' name='finish_id' value=''>
     </form>
     <h3>メモ欄</h3>
