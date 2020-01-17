@@ -1,1 +1,12 @@
+table {
+    background-color: #e1f0f7;
+}
+ 
+th{
+    background-color: #4a82e9;  /* 背景色指定 */
+    /*width:  50px;              /* 幅指定 */
+    height: 30px;               /* 高さ指定 */
+}
 
+th.button { width: 20px; }
+th.needtime_est { width: 70px; }
