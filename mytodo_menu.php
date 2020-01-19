@@ -22,6 +22,7 @@
 〇・作業開始ボタンの追加。
 〇・入力欄大きく。新規登録と編集の詳細欄。
 ・時間指定しやすくする。
+　…input=timeで対応する、
 〇・時間指定しない入力パターンも必要。
 〇・重要度、推定所要時間のカラムを作る。
 　→・regとmenuにも入力・編集・表示を対応させる。
@@ -40,7 +41,8 @@
 ・リストの「アーカイブ保存」ボタンを追加（表から非表示。アーカイブフラグ追加。）
 〇・表のタイトルから終了日時のループをhtmlに直す。(regとmenuどちらも)
 ・登録日を作る。作業開始日とは別。
-・作業開始を押すと、終了予定日時が自動入力される。
+〇・作業開始を押すと、終了予定日時が自動入力される。
+　…ついでにオブジェクト指向にした。
 ・目的、PDCAなどの項目追加（詳細とメモ欄で代用はできている）
  …詳細の登録デフォルト設定で対応可。こちらのほうが柔軟にできる。
 
@@ -60,6 +62,7 @@ $pass = '';
 $pdo = new PDO($dsn, $user, $pass, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_WARNING));
 
 date_default_timezone_set('Asia/Tokyo');
+$date = new DateTime('now');
 
 //編集による更新
 if(!empty($_POST['edit_id'])){
@@ -92,16 +95,27 @@ if(!empty($_POST['remove_id'])){
 
 //終了時刻の更新
 if(!empty($_POST['finish_id'])){
-    $finish_time = date("Y/m/d H:i:s");
+    $finish_time = $date->format('Y/m/d H:i:s');
     $sql = "UPDATE todo_master SET finish='".$finish_time."' WHERE id=".$_POST['finish_id'];
     $stmt = $pdo->prepare($sql);
     $stmt->execute();
 }
 
-//開始時刻の更新
+//開始時刻・終了予定日時の更新
 if(!empty($_POST['start_id'])){
-    $start_time = date("Y/m/d H:i:s");
-    $sql = "UPDATE todo_master SET start='".$start_time."' WHERE id=".$_POST['start_id'];
+    $start_time = $date->format('Y/m/d H:i:s');
+
+    //終了予定日時の演算
+    $sql = "SELECT needtime_est FROM todo_master WHERE id=".$_POST['start_id'];
+    $stmt = $pdo->query($sql);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);   
+    $interval = 'PT'.$row['needtime_est'].'M';
+    $date->add(new DateInterval($interval));
+    $target_time = $date->format('Y/m/d H:i:s');
+    
+    $sql = "UPDATE todo_master 
+    SET start='".$start_time."', target='".$target_time."' 
+    WHERE id=".$_POST['start_id'];
     $stmt = $pdo->prepare($sql);
     $stmt->execute();
 }
@@ -128,7 +142,9 @@ $archive_memo = file_get_contents("archive_memo.txt");
 
 if($ontable_memo==''){
     /***** メモ欄デフォルト設定 *****/
-    $ontable_memo.=date('Y年m月d日')."\n";
+    $date = new DateTime('now');
+    //$ontable_memo.=date('Y年m月d日')."\n";
+    $ontable_memo.= $date->format('Y年m月d日');
 }
 
 $sql = "SELECT * FROM todo_master;";
