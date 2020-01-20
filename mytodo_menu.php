@@ -14,7 +14,7 @@
  …日付ごとに見れるようにする。
 〇・作業中、作業終了で表を分ける。
 　→・その中で日にちで分ける。
-　　→・表の日時を時間表示にする。
+　　→〇・表の日時を時間表示にする。
 〇・id仕様からクラス仕様に整理する（大きく改変必要。やるなら早めにやっておきたい。）
 　…〇・イメージは、行ごとにdivで異なるid付与、クラスはdispとeditの２つのみ付与。
 　　divのid指定からのclass指定により、指定行のみの操作が可能になるはず。
@@ -45,6 +45,7 @@
 　…ついでにオブジェクト指向にした。
 ・目的、PDCAなどの項目追加（詳細とメモ欄で代用はできている）
  …詳細の登録デフォルト設定で対応可。こちらのほうが柔軟にできる。
+〇・多分0時0分で登録すると表示されないバグある。
 
 ＜優先（低）＞
 ・作業中断に対応させる。
@@ -105,7 +106,7 @@ if(!empty($_POST['finish_id'])){
 if(!empty($_POST['start_id'])){
     $start_time = $date->format('Y/m/d H:i:s');
 
-    //終了予定日時の演算
+    //終了予定日時の計算
     $sql = "SELECT needtime_est FROM todo_master WHERE id=".$_POST['start_id'];
     $stmt = $pdo->query($sql);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);   
@@ -143,7 +144,6 @@ $archive_memo = file_get_contents("archive_memo.txt");
 if($ontable_memo==''){
     /***** メモ欄デフォルト設定 *****/
     $date = new DateTime('now');
-    //$ontable_memo.=date('Y年m月d日')."\n";
     $ontable_memo.= $date->format('Y年m月d日');
 }
 
@@ -165,11 +165,19 @@ while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
     // }
     // $row['needmin_est'].='分';
 
+    //時分表示用
+    $start_date = new DateTime($row['start']);
+    $target_date = new DateTime($row['target']);
+    $finish_date = new DateTime($row['finish']);
+    $row['start_Hi'] = $start_date->format('H:i');
+    $row['target_Hi'] = $target_date->format('H:i');
+    $row['finish_Hi'] = $finish_date->format('H:i');
+
     //指定なし時刻非表示用
-    if($row['start']==$non_input) $row['start']="";
-    if($row['target']==$non_input) $row['target']="";
+    if($row['start']==$non_input) $row['start_Hi']="";
+    if($row['target']==$non_input) $row['target_Hi']="";
     if($row['finish']==$non_input){
-        $row['finish']="";
+        $row['finish_Hi']="";
         $ongoing_result[]=$row;
     }else{
         $finished_result[]=$row;
@@ -229,15 +237,15 @@ function br2nl($string){
                         </p>
                     </td>
                     <td>
-                        <p class='disp'><?php echo $row['start']; ?></p>
+                        <p class='disp'><?php echo $row['start_Hi']; ?></p>
                         <input type=text class='edit' name='start' value='<?php echo $row['start']; ?>'>
                     </td>
                     <td>
-                        <p class='disp'><?php echo $row['target']; ?></p>
+                        <p class='disp'><?php echo $row['target_Hi']; ?></p>
                         <input type=text class='edit' name='target' value='<?php echo $row['target']; ?>'>
                     </td>
                     <td>
-                        <p class='disp'><?php echo $row['finish']; ?></p>
+                        <p class='disp'><?php echo $row['finish_Hi']; ?></p>
                         <input type=text class='edit' name='finish' value='<?php echo $row['finish']; ?>'>
                     </td>
                 </tr>
@@ -279,11 +287,11 @@ function br2nl($string){
                         </p>
                     </td>
                     <td>
-                        <p class='disp'><?php echo $row['start']; ?></p>
+                        <p class='disp'><?php echo $row['start_Hi']; ?></p>
                         <input type=text class='edit' name='start' value='<?php echo $row['start']; ?>'>
                     </td>
                     <td>
-                        <p class='disp'><?php echo $row['target']; ?></p>
+                        <p class='disp'><?php echo $row['target_Hi']; ?></p>
                         <input type=text class='edit' name='target' value='<?php echo $row['target']; ?>'>
                     </td>
                 </tr>
