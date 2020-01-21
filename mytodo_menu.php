@@ -1,6 +1,6 @@
 <pre>
 <?php
-//print_r($_POST);
+print_r($_POST);
 ?>
 </pre>
 
@@ -25,9 +25,10 @@
 　…input=timeで対応する、
 〇・時間指定しない入力パターンも必要。
 〇・重要度、推定所要時間のカラムを作る。
-　→・regとmenuにも入力・編集・表示を対応させる。
+　→〇・regとmenuにも入力・編集・表示を対応させる。
 　　　…regは完了。menuは所要時間が完了、重要度が未完。
-・表に日にちいらない。
+〇・重要度を表示させる。
+〇・表に日にちいらない。
 ・メモ欄の一時保存を遷移時に必ずするように。
 〇・作業開始ボタンつける。
 ・表のずれを直す。
@@ -52,8 +53,10 @@
 ・作業実績の表示
 ・作業実績の分析
 ・時刻入力方法の改善
-・デザインの改善
+・デザインの改善　…　bootstrapなど
 ・メモアーカイブのDB化
+・複数ユーザーへの対応。
+　…会員登録機能。管理者画面の追加。
 未・メモのbr消し
 *******************************************************/
 
@@ -68,10 +71,11 @@ $date = new DateTime('now');
 //編集による更新
 if(!empty($_POST['edit_id'])){
     $needtime_est = $_POST['needhour_est']*60 + $_POST['needmin_est'];
+    $edit_id = $_POST['edit_id'];
     $sql = "UPDATE todo_master 
     SET title=:title, shosai=:shosai, start=:start, target=:target, 
     finish=:finish, needtime_est=:needtime_est, needhour_est=:needhour_est, 
-    needmin_est=:needmin_est 
+    needmin_est=:needmin_est, juyodo=:juyodo 
     WHERE id=:edit_id;";
     $stmt = $pdo->prepare($sql);
     $stmt -> bindParam(':title', $_POST['title'], PDO::PARAM_STR);
@@ -82,7 +86,8 @@ if(!empty($_POST['edit_id'])){
     $stmt -> bindParam(':needtime_est', $needtime_est, PDO::PARAM_INT);
     $stmt -> bindParam(':needhour_est', $_POST['needhour_est'], PDO::PARAM_INT);
     $stmt -> bindParam(':needmin_est', $_POST['needmin_est'], PDO::PARAM_INT);
-    $stmt -> bindParam(':edit_id', $_POST['edit_id'], PDO::PARAM_STR);
+    $stmt -> bindParam(':juyodo', $_POST['juyodo'.$edit_id], PDO::PARAM_STR);
+    $stmt -> bindParam(':edit_id', $edit_id, PDO::PARAM_STR);
     $stmt->execute();
 }
 
@@ -207,6 +212,7 @@ function br2nl($string){
                 <th class="button"></th>
                 <th>タイトル</th>
                 <th>詳細</th>
+                <th>重要度</th>
                 <th class="needtime_est">推定所要時間</th>
                 <th>開始日時</th>
                 <th>終了予定日時</th>
@@ -228,6 +234,15 @@ function br2nl($string){
                     <td>
                         <p class='disp'><?php echo $row['shosai']; ?></p>
                         <textarea class='edit' name='shosai' cols='40' rows='4'><?php echo $row['shosai']; ?></textarea>
+                    </td>
+                    <td>
+                        <p class='disp'><?php echo $row['juyodo']; ?></p>
+                        <p class='edit'>
+                            <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='高'>高
+                            <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='中'>中
+                            <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='低'>低
+                        </p>
+                        <input type=hidden id='juyodo_checked<?php echo $row['id']; ?>' name='juyodo_checked' value='<?php echo $row['juyodo']; ?>'>
                     </td>
                     <td>
                         <p class='disp'><?php echo $row['needhour_est']."時間".$row['needmin_est']."分"; ?></p>
@@ -258,6 +273,7 @@ function br2nl($string){
                 <th class="button"></th>
                 <th>タイトル</th>
                 <th>詳細</th>
+                <th>重要度</th>
                 <th class="needtime_est">推定所要時間</th>
                 <th>開始日時</th>
                 <th>終了予定日時</th>
@@ -278,6 +294,15 @@ function br2nl($string){
                     <td>
                         <p class='disp'><?php echo $row['shosai']; ?></p>
                         <textarea class='edit' name='shosai' cols='40' rows='4'><?php echo $row['shosai']; ?></textarea>
+                    </td>
+                    <td>
+                        <p class='disp'><?php echo $row['juyodo']; ?></p>
+                        <p class='edit'>
+                            <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='高'>高
+                            <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='中'>中
+                            <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='低'>低
+                        </p>
+                        <input type=hidden id='juyodo_checked<?php echo $row['id']; ?>' name='juyodo_checked' value='<?php echo $row['juyodo']; ?>'>
                     </td>
                     <td>
                         <p class='disp'><?php echo $row['needhour_est']."時間".$row['needmin_est']."分"; ?></p>
@@ -349,6 +374,17 @@ function typeChange(changeId){
 
     if(document.getElementById(changeId).value=='編集'){
         document.getElementById(changeId).value = '保存';
+        
+        //重要度ボタンの既定値設定
+        const juyodoCheckedValue = document.getElementById('juyodo_checked'+changeId).value;
+        const juyodoName = document.getElementsByName('juyodo'+changeId);
+        for(var i=0; i<juyodoName.length; i++){
+            if(juyodoName[i].value == juyodoCheckedValue){
+                juyodoName[i].checked = true;
+                alert(juyodoName[i].value);
+            }
+        }
+
     }else{
         document.getElementById(changeId).value = '編集';
         document.getElementById('edit_id').value = changeId;
@@ -363,4 +399,15 @@ function removeConfirm(removeId){
         document.mymenu_form.submit();
     }
 }
+
+// function juyodoCheckedSet(changeId){
+//     $('#rowid'+changeId).click(function() {
+//         var r = $('input[name="sample"]:checked').val();
+    
+//         console.log(r);
+//     })
+// }
+
+// $('input[value="banana"]').prop('checked', true);
+
 </script>
