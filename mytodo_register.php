@@ -13,7 +13,7 @@ $pdo = new PDO($dsn, $user, $pass, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_WARNI
 if($_POST){
     $needtime_est = $_POST['needhour_est']*60 + $_POST['needmin_est'];
     $sql = "INSERT INTO todo_master VALUES ('','".$_POST['title']."','".$_POST['shosai']."','".$_POST['start']."','".$_POST['target']."',
-    '','".$needtime_est."','".$_POST['needhour_est']."','".$_POST['needmin_est']."','".$_POST['juyodo']."')";
+    '','".$needtime_est."','".$_POST['needhour_est']."','".$_POST['needmin_est']."','".$_POST['juyodo']."','')";
     $stmt = $pdo->prepare($sql);
     $stmt->execute();
 }
@@ -58,9 +58,9 @@ while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
             <input type='number' name='needmin_est' min='0' max='50' step='10' value='00'>分
         </p>
         <p>重要度：
-            <input type='radio' name='juyodo' value='低'>低
-            <input type='radio' name='juyodo' value='中' checked>中
             <input type='radio' name='juyodo' value='高'>高
+            <input type='radio' name='juyodo' value='中' checked>中
+            <input type='radio' name='juyodo' value='低'>低
         </p>
         開始日時：<input type='text' id='start' name='start'><br>
         終了予定日時：<input type='text' id='target' name='target'><br>

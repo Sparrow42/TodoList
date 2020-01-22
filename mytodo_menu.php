@@ -35,6 +35,7 @@ print_r($_POST);
 　…幅の問題でcssを変えても変化しない。日時などを省略してから。
 ・進行度ステータス（progress_flag）を作る。
 ・menuで作業順の入力できるようにする。
+・優先順位の設定。
 ・並び順を重要度・作業順に変更する。
 
 ＜優先（中）＞
@@ -49,6 +50,7 @@ print_r($_POST);
 〇・多分0時0分で登録すると表示されないバグある。
 
 ＜優先（低）＞
+・typeChangeのeditとdispの整理。
 ・作業中断に対応させる。
 ・作業実績の表示
 ・作業実績の分析
@@ -126,6 +128,17 @@ if(!empty($_POST['start_id'])){
     $stmt->execute();
 }
 
+//優先順位の更新
+if(!empty($_POST['priority_update'])){
+    $priority = $_POST['priority'];
+    foreach($priority as $key => $value){
+        $sql = "UPDATE todo_master SET ";
+        $sql.= "priority='".$value;
+        $sql.= "' WHERE id=".$key;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+    }
+}
 
 //メモの<br>消しに失敗
 // $ontable_memo_nl = file_get_contents("ontable_memo.txt");
@@ -158,6 +171,8 @@ $non_input='0000-00-00 00:00:00';
 $ongoing_result=[];
 $finished_result=[];
 $result=[];
+$ongoing_cnt=0;
+$finished_cnt=0;
 while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
     //推定所要時間の桁・単位の調整
     // if($row['needhour_est']==0){
@@ -183,8 +198,10 @@ while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
     if($row['target']==$non_input) $row['target_Hi']="";
     if($row['finish']==$non_input){
         $row['finish_Hi']="";
+        $ongoing_cnt++;
         $ongoing_result[]=$row;
     }else{
+        $finished_cnt++;
         $finished_result[]=$row;
     }
     $result[]=$row;
@@ -193,8 +210,8 @@ while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
 function br2nl($string){
     return preg_replace('/<br[[:space:]]*\/?[[:space:]]*>/i', "\n", $string);
 }
-
 ?>
+
 
 <html>
     <head>
@@ -242,7 +259,7 @@ function br2nl($string){
                             <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='中'>中
                             <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='低'>低
                         </p>
-                        <input type=hidden id='juyodo_checked<?php echo $row['id']; ?>' name='juyodo_checked' value='<?php echo $row['juyodo']; ?>'>
+                        <input type=hidden id='juyodo_checked<?php echo $row['id']; ?>' value='<?php echo $row['juyodo']; ?>'>
                     </td>
                     <td>
                         <p class='disp'><?php echo $row['needhour_est']."時間".$row['needmin_est']."分"; ?></p>
@@ -275,6 +292,7 @@ function br2nl($string){
                 <th>詳細</th>
                 <th>重要度</th>
                 <th class="needtime_est">推定所要時間</th>
+                <th>優先順位<input type=submit class='priority' name='priority_update' value='更新'></th>
                 <th>開始日時</th>
                 <th>終了予定日時</th>
             </tr>
@@ -302,7 +320,7 @@ function br2nl($string){
                             <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='中'>中
                             <input type='radio' class='edit' name='juyodo<?php echo $row['id']; ?>' value='低'>低
                         </p>
-                        <input type=hidden id='juyodo_checked<?php echo $row['id']; ?>' name='juyodo_checked' value='<?php echo $row['juyodo']; ?>'>
+                        <input type=hidden id='juyodo_checked<?php echo $row['id']; ?>' value='<?php echo $row['juyodo']; ?>'>
                     </td>
                     <td>
                         <p class='disp'><?php echo $row['needhour_est']."時間".$row['needmin_est']."分"; ?></p>
@@ -310,6 +328,15 @@ function br2nl($string){
                             <input type='number' class='edit' name='needhour_est' min='0' max='10' value='<?php echo $row['needhour_est']; ?>'>時間
                             <input type='number' class='edit' name='needmin_est' min='0' max='50' step='10' value='<?php echo $row['needmin_est']; ?>'>分
                         </p>
+                    </td>
+                    <td>
+                        <select class='priority' name="priority[<?php echo $row['id']; ?>]">
+                            <option value="99"></option>
+                            <!--<option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>-->
+                        </select>
+                        <input type=hidden name='priority_num[]' value='<?php echo $row['priority']; ?>'>
                     </td>
                     <td>
                         <p class='disp'><?php echo $row['start_Hi']; ?></p>
@@ -352,10 +379,48 @@ for(var i=0; i<disp.length; i++){
     disp[i].style.display = "block";
 }
 
+//優先順位のオプション設定
+const priorityClass = document.getElementsByClassName('priority'); //フォームと直接紐づくクラス
+const priorityNum = document.getElementsByName('priority_num[]'); //データベースから取ってきたpriority
+const optionNum = <?php echo $ongoing_cnt; ?>;
+for(var j=1; j<priorityClass.length; j++){
+    for(var i=1; i<=optionNum; i++){
+        var option = document.createElement("option");
+        option.text = i;
+        option.value = i;
+        priorityClass[j].appendChild(option);
+    }
+}
+//優先順位の既定値設定
+//priorityNumの数値とoptionのvalueが一致したら、クラスのpriorityClass.item(i+1).options[j].selected= 'true'をする。
+for(var i=0; i<priorityNum.length; i++){
+    //alert(priority.item(i).value);
+    //alert('priNumVal='+priorityNum[i].value);
+    for(var j=1; j<optionNum+1; j++){
+        //alert(priority.item(i).options[j].value);
+        if(priorityNum[i].value == priorityClass.item(1).options[j].value){
+            //alert('一致しました。'+j);
+            priorityClass[i+1].options[j].selected= 'true';
+        }
+    }
+}
+
 function typeChange(changeId){
+    /***************************************************
+    編集していないとき
+    … class=disp -> disprow[i].style.display = "block";
+      class=edit -> editrow[i].style.display = "none";
+                    edit[i].disabled = 'true';
+    編集中 
+    … class=disp -> disprow[i].style.display = "none";
+      class=edit -> editrow[i].style.display = "block";
+                    editrow[i].disabled = "";
+    ****************************************************/
+
     const rowid = document.getElementById('rowid'+changeId);
     const editrow = rowid.getElementsByClassName('edit');
     const disprow = rowid.getElementsByClassName('disp');
+    //下のif文に合成したほうが分かりやすいかも
     for(var i=0; i<editrow.length; i++){
         if(edit[i].style.display = "none"){
             editrow[i].style.display = "block";
@@ -381,13 +446,25 @@ function typeChange(changeId){
         for(var i=0; i<juyodoName.length; i++){
             if(juyodoName[i].value == juyodoCheckedValue){
                 juyodoName[i].checked = true;
-                alert(juyodoName[i].value);
             }
+        }
+
+        //優先順位の編集不可設定
+        const priority = document.getElementsByClassName('priority');
+        for(var i=0; i<priority.length; i++){
+            priority[i].disabled = 'true';
         }
 
     }else{
         document.getElementById(changeId).value = '編集';
         document.getElementById('edit_id').value = changeId;
+
+        //優先順位の編集可能設定
+        const priority = document.getElementsByClassName('priority');
+        for(var i=0; i<priority.length; i++){
+            priority[i].disabled = '';
+        }
+
         document.mymenu_form.submit();
     }
 }
@@ -399,15 +476,5 @@ function removeConfirm(removeId){
         document.mymenu_form.submit();
     }
 }
-
-// function juyodoCheckedSet(changeId){
-//     $('#rowid'+changeId).click(function() {
-//         var r = $('input[name="sample"]:checked').val();
-    
-//         console.log(r);
-//     })
-// }
-
-// $('input[value="banana"]').prop('checked', true);
 
 </script>
