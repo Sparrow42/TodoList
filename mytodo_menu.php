@@ -21,12 +21,12 @@ print_r($_POST);
 　　…trへのid指定により完了。divは効かない。
 〇・作業開始ボタンの追加。
 〇・入力欄大きく。新規登録と編集の詳細欄。
-・時間指定しやすくする。
+〇・時間指定しやすくする。
 　…input=timeで対応する、
 〇・時間指定しない入力パターンも必要。
 〇・重要度、推定所要時間のカラムを作る。
 　→〇・regとmenuにも入力・編集・表示を対応させる。
-　　　…regは完了。menuは所要時間が完了、重要度が未完。
+　　　…regは完了。menuは所要時間が完了、重要度も完了。
 〇・重要度を表示させる。
 〇・表に日にちいらない。
 ・メモ欄の一時保存を遷移時に必ずするように。
@@ -35,8 +35,8 @@ print_r($_POST);
 　…幅の問題でcssを変えても変化しない。日時などを省略してから。
 ・進行度ステータス（progress_flag）を作る。
 ・menuで作業順の入力できるようにする。
-・優先順位の設定。
-・並び順を重要度・作業順に変更する。
+〇・優先順位の設定。
+途・並び順を重要度・作業順に変更する。
 
 ＜優先（中）＞
 ・継続Todoを設定する（継続フラグ追加。表を別で表示する。）
@@ -215,26 +215,34 @@ function br2nl($string){
 
 <html>
     <head>
-        <link rel="stylesheet" type="text/css" href="css/table.css">
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <!--<link rel="stylesheet" type="text/css" href="css/table.css">-->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.0/css/theme.default.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.0/css/theme.blue.min.css">
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.0/js/jquery.tablesorter.min.js"></script>
+        <!-- 追加機能(widgets)を使用する場合は次も追加する -->
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.0/js/jquery.tablesorter.widgets.min.js"></script>
     </head>
     <h2>Todoリスト　マイメニュー</h2>
     <h3>今日のTodo</h3>
     <form method='post' name='mymenu_form' action='mytodo_menu.php'>
         <a href='mytodo_register.php'>新規登録</a><br>
         <br>達成済み項目<br>
-        <table border="1">
-            <tr>
-                <th>行番号</th>
-                <th class="button"></th>
-                <th>タイトル</th>
-                <th>詳細</th>
-                <th>重要度</th>
-                <th class="needtime_est">推定所要時間</th>
-                <th>開始日時</th>
-                <th>終了予定日時</th>
-                <th>終了日時</th>
-            </tr>
+        <table id="myTableFinished" class="tablesorter tablesorter-blue">
+            <thead>
+                <tr>
+                    <th>行番号</th>
+                    <th class="button"></th>
+                    <th>タイトル</th>
+                    <th>詳細</th>
+                    <th>重要度</th>
+                    <th class="needtime_est">推定所要時間</th>
+                    <th>開始日時</th>
+                    <th>終了予定日時</th>
+                    <th>終了日時</th>
+                </tr>
+            </thead>
+            <tbody>
             <?php foreach($finished_result as $row){ ?>
                 <tr id='<?php echo "rowid".$row['id']; ?>'>
                     <td><?php echo $row['id']; ?></td>
@@ -282,20 +290,24 @@ function br2nl($string){
                     </td>
                 </tr>
             <?php } ?>
+            </tbody>
         </table>
         <br>未達成項目<br>
-        <table border="1">
-            <tr>
-                <th>行番号</th>
-                <th class="button"></th>
-                <th>タイトル</th>
-                <th>詳細</th>
-                <th>重要度</th>
-                <th class="needtime_est">推定所要時間</th>
-                <th>優先順位<input type=submit class='priority' name='priority_update' value='更新'></th>
-                <th>開始日時</th>
-                <th>終了予定日時</th>
-            </tr>
+        <table id="myTableOngoing" class="tablesorter tablesorter-blue">
+            <thead>
+                <tr>
+                    <th>行番号</th>
+                    <th class="button"></th>
+                    <th>タイトル</th>
+                    <th>詳細</th>
+                    <th>重要度</th>
+                    <th class="needtime_est">推定所要時間</th>
+                    <th>優先順位<input type=submit class='priority' name='priority_update' value='更新'></th>
+                    <th>開始日時</th>
+                    <th>終了予定日時</th>
+                </tr>
+            </thead>
+            <tbody>
             <?php foreach($ongoing_result as $row){ ?>
                 <tr id='<?php echo "rowid".$row['id']; ?>'>
                     <td><?php echo $row['id']; ?></td>
@@ -332,9 +344,6 @@ function br2nl($string){
                     <td>
                         <select class='priority' name="priority[<?php echo $row['id']; ?>]">
                             <option value="99"></option>
-                            <!--<option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>-->
                         </select>
                         <input type=hidden name='priority_num[]' value='<?php echo $row['priority']; ?>'>
                     </td>
@@ -348,6 +357,7 @@ function br2nl($string){
                     </td>
                 </tr>
             <?php } ?>
+            </tbody>
         </table>
 
         <input type=hidden id='edit_id' name='edit_id' value=''>
@@ -367,6 +377,28 @@ function br2nl($string){
 </html>
 
 <script type="text/javascript">
+
+$(function() {
+    $("#myTableFinished").tablesorter({ 
+        sortList: [[0,0], [1,0]],
+        headers: { 
+          1: {sorter:false},
+          2: {sorter:false},
+          3: {sorter:false}
+        } 
+    });
+});
+
+$(function() {
+    $("#myTableOngoing").tablesorter({ 
+        sortList: [[0,0], [1,0]], 
+        headers: { 
+          1: {sorter:false},
+          2: {sorter:false},
+          3: {sorter:false}
+        }
+    });
+});
 
 //初期状態は編集不可
 const edit = document.getElementsByClassName('edit');
@@ -394,12 +426,8 @@ for(var j=1; j<priorityClass.length; j++){
 //優先順位の既定値設定
 //priorityNumの数値とoptionのvalueが一致したら、クラスのpriorityClass.item(i+1).options[j].selected= 'true'をする。
 for(var i=0; i<priorityNum.length; i++){
-    //alert(priority.item(i).value);
-    //alert('priNumVal='+priorityNum[i].value);
     for(var j=1; j<optionNum+1; j++){
-        //alert(priority.item(i).options[j].value);
         if(priorityNum[i].value == priorityClass.item(1).options[j].value){
-            //alert('一致しました。'+j);
             priorityClass[i+1].options[j].selected= 'true';
         }
     }
